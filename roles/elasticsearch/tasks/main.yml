@@ -1,0 +1,95 @@
+- name: Check if Elasticsearch service exists
+  win_shell: Get-Service elastic* | Select-Object -ExpandProperty Name
+  register: service_status
+  ignore_errors: yes
+
+- block:
+    
+  - name: Stop Elasticsearch service
+    win_service:
+      name: "{{ service_status.stdout_lines[0] }}"
+      state: stopped
+
+  - name: Remove Elasticsearch service
+    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
+    ignore_errors: yes
+
+
+  - name: Remove Elasticsearch installation directory
+    win_file:
+      path: "{{ elastic_dir }}"
+      state: absent
+
+  - name: Remove Elasticsearch data directory
+    win_file:
+      path: C:\ProgramData\Elastic\Elasticsearch
+      state: absent
+
+  - name: Remove Elasticsearch logs directory
+    win_file:
+      path: "{{ elastic_dir }}"\logs
+      state: absent
+
+  - name: Clean up any remaining configuration files
+    win_file:
+      path: "{{ elastic_dir }}"\config
+      state: absent
+
+  when: service_status.stdout_lines != []
+
+
+- name: Create Elasticsearch directory
+  win_file:
+    path: "{{ elastic_dir }}"
+    state: directory
+
+- name: Check folder permissions for Elasticsearch
+  win_acl:
+    path: "{{ elastic_dir }}"
+    user: '{{ ansible_user }}'
+    type: allow
+    rights: ReadAndExecute
+
+- name: Download Elasticsearch
+  win_get_url:
+    url: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.14.1-windows-x86_64.zip
+    dest: "{{ elastic_dir }}"\"{{ elastic_Version }}".zip
+
+- name: Unzip Elasticsearch
+  win_unzip:
+    src: "{{ elastic_dir }}"\"{{ elastic_Version }}".zip
+    dest: "{{ elastic_dir }}"
+    creates: "{{ elastic_dir }}"\"{{ elastic_Version }}"
+
+- name: Install Elasticsearch service
+  win_shell: |
+    "{{ elastic_dir }}"\"{{ elastic_Version }}"\bin\elasticsearch-service.bat install
+  args:
+    executable: cmd
+
+- name: Start Elasticsearch service
+  win_service:
+    name: elasticsearch-service-x64
+    start_mode: auto
+    state: started
+
+- name: Add user
+  win_shell: |
+    C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-users.bat useradd newuser -p test123 -r superuser
+  args:
+    executable: cmd
+  register: add_user
+  until: add_user is not failed
+  retries: 10
+  delay: 10
+
+
+- name: Wait for Elasticsearch to start
+  win_uri:
+    url: "{{ http://127.0.0.1:9200 }}"
+    method: GET
+    status_code: 200
+    url_username: "{{ elastic_user }}"
+    url_password: "{{ elastic_pwd }}"
+  retries: 2
+  delay: 10
