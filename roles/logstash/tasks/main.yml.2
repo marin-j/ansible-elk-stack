@@ -1,0 +1,141 @@
+vars:
+    logstash_version: "8.14.1"
+    logstash_installer_url: "https://artifacts.elastic.co/downloads/logstash/logstash-{{ logstash_version }}-windows-x86_64.zip"
+    nssm_url: "https://nssm.cc/release/nssm-2.24.zip"
+    logstash_dir: C:\ELK\logstash 
+    nssm_destination: "C:/Temp/nssm"
+    logstash_installation_dir: "C:ELK/logstash/logstash-{{ logstash_version }}"
+    logstash_service_name: "Logstash"
+
+tasks:
+
+  - name: Create Logstash directory
+    win_file:
+      path: "{{ logstah_dir }}"
+    state: directory
+
+  - name: Check folder permissions for Logstash
+    win_acl:
+      path: "{{ logstash_dir }}"
+    user: '{{ ansible_user }}'
+    rights: ReadAndExecute
+    type: allow
+
+
+  - name: Install Logstash
+    win_command: |
+      "{{ nssm_destination }}/nssm-2.24/win64/nssm.exe" install "{{ logstash_service_name }}" "{{ logstash_installation_dir }}/bin/logstash.bat" -f "{{ logstash_installation_dir }}/config/logstash.yml"
+    args:
+      creates: "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\{{ logstash_service_name }}"
+    register: logstash_install_result
+    failed_when: logstash_install_result.rc != 0
+ 
+  - name: Start Logstash service
+    win_service:
+      name: "{{ logstash_service_name }}"
+      state: started
+ 
+  - name: Wait for Logstash to start
+    win_uri:
+      url: http://localhost:9600
+      method: GET
+      status_code: 200
+      retries: 30
+      delay: 10
+    register: logstash_start_result
+    until: logstash_start_result.status == 200
+    retries: 5
+    delay: 10
+ 
+  - name: Display Logstash status
+    debug:
+      msg: "Logstash is {% if logstash_start_result.status == 200 %}running{% else %}not running{% endif %}"
+ 
+ 
+
+
+
+#- name: Download Logstash
+#  win_get_url:
+#    url: https://artifacts.elastic.co/downloads/logstash/logstash-8.14.1-windows-x86_64.zip
+#    dest: C:\ELK\logstash\logstash-8.14.1.zip
+#
+#- name: Unzip Logstash
+#  win_unzip:
+#    src: C:\ELK\logstash\logstash-8.14.1.zip
+#    dest: C:\ELK\logstash
+#    creates: C:\ELK\logstash\logstash-8.14.1
+#
+#- name: Check if Logstash service exists
+#  win_shell: Get-Service logstash* | Select-Object -ExpandProperty Name
+#  register: service_status
+#  ignore_errors: yes
+#
+#- block:
+#    
+#  - name: Stop Logstash service
+#    win_service:
+#      name: "{{ service_status.stdout_lines[0] }}"
+#      state: stopped
+#
+#  - name: Remove Logstash service
+#    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
+#    ignore_errors: yes
+#
+#
+#  - name: Remove Logstash installation directory
+#    win_file:
+#      path: C:\ELK\logstash
+#      state: absent
+#
+#  - name: Remove Logstash data directory
+#    win_file:
+#      path: C:\ProgramData\Elastic\Logstash
+#      state: absent
+#
+#  - name: Remove Logstash logs directory
+#    win_file:
+#      path: C:\ELK\logstash\logs
+#      state: absent
+#
+#  - name: Clean up any remaining configuration files
+#    win_file:
+#      path: C:\ELK\logstash\config
+#      state: absent
+#
+#  when: service_status.stdout_lines != []
+#
+#- name: Create Logstash directory
+#  win_file:
+#    path: C:\ELK\logstash
+#    state: directory
+#
+#- name: Check folder permissions for Logstash
+#  win_acl:
+#    path: C:\ELK\logstash
+#    user: '{{ ansible_user }}'
+#    rights: ReadAndExecute
+#    type: allow
+#
+#- name: Download Logstash
+#  win_get_url:
+#    url: https://artifacts.elastic.co/downloads/logstash/logstash-8.14.1-windows-x86_64.zip
+#    dest: C:\ELK\logstash\logstash-8.14.1.zip
+#
+#- name: Unzip Logstash
+#  win_unzip:
+#    src: C:\ELK\logstash\logstash-8.14.1.zip
+#    dest: C:\ELK\logstash
+#    creates: C:\ELK\logstash\logstash-8.14.1
+#
+#- name: Configure Logstash
+#  win_template:
+#    src: templates/logstash.conf.j2
+#    dest: C:\ELK\logstash\logstash-8.14.1\config\logstash.conf
+#
+#- name: Start Logstash
+#  win_shell: |
+#    C:\ELK\logstash\logstash-8.14.1\bin\logstash.bat -f C:\ELK\logstash\logstash-8.14.1\config\logstash.conf
+#  args:
+#    executable: cmd
+#    creates: C:\ELK\logstash\logstash-8.14.1\logs\logstash.stdout
