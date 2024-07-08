@@ -1,0 +1,13 @@
+input {
+  elasticsearch {
+    hosts => ["{{ elasticsearch_url }}"]
+    user => "your_user"
+    password => "your_password"
+  }
+}
+
+output {
+  file {
+    path => "/path/to/data_diode"
+  }
+}
