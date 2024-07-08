@@ -10,10 +10,10 @@
 outputs:
   default:
     type: elasticsearch
-    hosts: [127.0.0.1:9200]
+    hosts: [{{ elastic_url }}]
     api-key: "example-key"
-    username: "newuser"
-    password: "test123"
+    username: "{{ elastic_user }}"
+    password: "{{ elastic_pwd }}"
 
 inputs:
     # Each input in a policy must have a unique value for the id key.
