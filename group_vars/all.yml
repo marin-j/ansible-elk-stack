@@ -1,0 +1,13 @@
+elastic_verison: "8.14.1"
+
+logstash_version: "8.14.1"
+logstash_installer_url: "https://artifacts.elastic.co/downloads/logstash/logstash-{{ logstash_version }}-windows-x86_64.zip"
+nssm_url: "https://nssm.cc/release/nssm-2.24.zip"
+logstash_dir: C:\ELK\logstash 
+nssm_destination: "C:/Temp/nssm"
+logstash_installation_dir: "C:ELK/logstash/logstash-{{ logstash_version }}"
+logstash_service_name: "Logstash"
+elasticsearch_url: "http://127.0.0.1:9200" 
+
+elastic_user: "newuser"
+elastic_pwd: "test123"

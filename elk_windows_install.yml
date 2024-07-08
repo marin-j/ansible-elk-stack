@@ -1,0 +1,24 @@
+- name: Check depedencies needed for elk stack
+  hosts: all
+  roles:
+    - pretasks
+
+- name: Install Elasticsearch
+  hosts: elastic_hosts
+  roles:
+    - elasticsearch
+
+- name: Install Kibana
+  hosts: kibana_hosts
+  roles:
+    - kibana
+
+- name: Install Logstash
+  hosts: kibana_hosts
+  roles:
+    - logstash
+
+- name: Install Elastic Agent
+  hosts: elastic_agent_hosts
+  roles:
+    - elastic-agent
