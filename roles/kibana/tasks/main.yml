@@ -1,0 +1,77 @@
+- name: Check if Kibana service exists
+  win_shell: Get-Service kibana* | Select-Object -ExpandProperty Name
+  register: service_status
+  ignore_errors: yes
+
+- block:
+    
+  - name: Stop Kibana service
+    win_service:
+      name: "{{ service_status.stdout_lines[0] }}"
+      state: stopped
+
+  - name: Remove Kibana service
+    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
+    ignore_errors: yes
+
+
+  - name: Remove Kibana installation directory
+    win_file:
+      path: C:\ELK\kibana
+      state: absent
+
+  - name: Remove Kibana data directory
+    win_file:
+      path: C:\ProgramData\Elastic\Kibana
+      state: absent
+
+  - name: Remove Kibana logs directory
+    win_file:
+      path: C:\ELK\kibana\logs
+      state: absent
+
+  - name: Clean up any remaining configuration files
+    win_file:
+      path: C:\ELK\kibana\config
+      state: absent
+
+  when: service_status.stdout_lines != []
+
+- name: Create Kibana directory
+  win_file:
+    path: C:\ELK\kibana
+    state: directory
+
+- name: Check folder permissions for Kibana
+  win_acl:
+    path: C:\ELK\kibana
+    user: '{{ ansible_user }}'
+    rights: ReadAndExecute
+    type: allow
+
+- name: Download Kibana
+  win_get_url:
+    url: https://artifacts.elastic.co/downloads/kibana/kibana-8.14.1-windows-x86_64.zip
+    dest: C:\ELK\kibana\kibana-8.14.1.zip
+
+- name: Unzip Kibana
+  win_unzip:
+    src: C:\ELK\kibana\kibana-8.14.1.zip
+    dest: C:\ELK\kibana
+    creates: C:\ELK\kibana\kibana-8.14.1
+
+- name: Configure Kibana
+  win_template:
+    src: templates/kibana.yml/j2
+    dest: C:\ELK\kibana\kibana-8.14.1\config\kibana.yml
+
+- name: Start Kibana in the background
+  win_shell: |
+        Start-Process -FilePath "C:\Path\To\Kibana\bin\kibana.bat" -WorkingDirectory "C:\Path\To\Kibana" -NoNewWindow -PassThru
+
+- name: Start Kibana
+  win_shell: |
+    C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat
+  args:
+    executable: cmd
+    creates: C:\ELK\kibana\kibana-8.14.1\logs\kibana.stdout
