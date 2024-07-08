@@ -1,0 +1,72 @@
+- name: Check if Agent service exists
+  win_shell: Get-Service elastic-agent* | Select-Object -ExpandProperty Name
+  register: service_status
+  ignore_errors: yes
+
+- block:
+    
+  - name: Stop Agent service
+    win_service:
+      name: "{{ service_status.stdout_lines[0] }}"
+      state: stopped
+
+  - name: Remove Agent service
+    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
+    ignore_errors: yes
+
+
+  - name: Remove Agent installation directory
+    win_file:
+      path: C:\ELK\elastic-agent
+      state: absent
+
+  - name: Remove Agent data directory
+    win_file:
+      path: C:\ProgramData\Elastic\Elastic-Agent
+      state: absent
+
+  - name: Remove Agent logs directory
+    win_file:
+      path: C:\ELK\elastic-agent\logs
+      state: absent
+
+  - name: Clean up any remaining configuration files
+    win_file:
+      path: C:\ELK\elastic-agent\config
+      state: absent
+
+  when: service_status.stdout_lines != []
+
+- name: Create Elastic Agent directory
+  win_file:
+    path: C:\ELK\elastic-agent
+    state: directory
+
+- name: Check folder permissions for Elastic Agent
+  win_acl:
+    path: C:\ELK\elastic-agent
+    user: '{{ ansible_user }}'
+    rights: ReadAndExecute
+    type: allow
+
+- name: Download Elastic Agent
+  win_get_url:
+    url: https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.14.1-windows-x86_64.zip
+    dest: C:\ELK\elastic-agent\elastic-agent-8.14.1.zip
+
+- name: Unzip Elastic Agent
+  win_unzip:
+    src: C:\ELK\elastic-agent\elastic-agent-8.14.1.zip
+    dest: C:\ELK\elastic-agent
+    creates: C:\ELK\elastic-agent\elastic-agent-8.14.1
+
+- name: Configure Elastic Agent
+  win_template:
+    src: elastic-agent.yml.j2
+    dest: C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.yml
+
+- name: Start Elastic Agent
+  win_shell: |
+    C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.exe install
+  args:
+    executable: cmd
