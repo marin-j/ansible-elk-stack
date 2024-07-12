@@ -1,3 +1,14 @@
 cluster.name: elasticsearch
 node.name: {{inventory_hostname}}
 
+#enable automatic creation of system indicec
+action.auto_create_index: .monitoring*,.watches,.triggered_watches,.watcher-history*,.ml*
+
+xpack.security.http.ssl:
+  enabled: false
+  keystore.path: certs/http.p12
+
+xpack.security.transportssl:
+  enabled: false
+  keystore.path: certs/transport.p12
+  truststore.path: certs/transport.p12

@@ -1,2 +1,7 @@
-elasticsearch.username: "{{ elastic_user }}"
-elasticsearch.password: "{{ elastic_pwd }}"
+server.port: 5601
+
+server.host: "localhost"
+
+elasticsearch.hosts: ["{{ elasticsearch_url }}"]
+
+elasticsearch.serviceAccountToken: "{{ service_token_extracted }}"

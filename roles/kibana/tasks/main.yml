@@ -1,42 +1,3 @@
-- name: Check if Kibana service exists
-  win_shell: Get-Service kibana* | Select-Object -ExpandProperty Name
-  register: service_status
-  ignore_errors: yes
-
-- block:
-    
-  - name: Stop Kibana service
-    win_service:
-      name: "{{ service_status.stdout_lines[0] }}"
-      state: stopped
-
-  - name: Remove Kibana service
-    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
-    ignore_errors: yes
-
-
-  - name: Remove Kibana installation directory
-    win_file:
-      path: C:\ELK\kibana
-      state: absent
-
-  - name: Remove Kibana data directory
-    win_file:
-      path: C:\ProgramData\Elastic\Kibana
-      state: absent
-
-  - name: Remove Kibana logs directory
-    win_file:
-      path: C:\ELK\kibana\logs
-      state: absent
-
-  - name: Clean up any remaining configuration files
-    win_file:
-      path: C:\ELK\kibana\config
-      state: absent
-
-  when: service_status.stdout_lines != []
-
 - name: Create Kibana directory
   win_file:
     path: C:\ELK\kibana
@@ -60,18 +21,31 @@
     dest: C:\ELK\kibana
     creates: C:\ELK\kibana\kibana-8.14.1
 
+- name: create kibana enrollment token
+  win_shell: |
+    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token
+  register: service_token
+
+- name: Extract the service token from the output
+  set_fact:
+    extracted_token: "{{ service_token.stdout | regex_search('=\\s*(.*)', '\\1') | first | trim }}"
+
+- name: save output of service_token
+  lineinfile:
+    path: group_vars/all.yml
+    regexp: '^service_token:'
+    line: "service_token_extracted: '{{ extracted_token }}'"
+  delegate_to: localhost
+
 - name: Configure Kibana
   win_template:
-    src: templates/kibana.yml/j2
+    src: kibana.yml.j2
     dest: C:\ELK\kibana\kibana-8.14.1\config\kibana.yml
-
-- name: Start Kibana in the background
-  win_shell: |
-        Start-Process -FilePath "C:\Path\To\Kibana\bin\kibana.bat" -WorkingDirectory "C:\Path\To\Kibana" -NoNewWindow -PassThru
 
 - name: Start Kibana
   win_shell: |
-    C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat
+    Start-Process "C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat" -NoNewWindow
   args:
-    executable: cmd
-    creates: C:\ELK\kibana\kibana-8.14.1\logs\kibana.stdout
+    executable: powershell.exe
+  async: 0
+  poll: 0

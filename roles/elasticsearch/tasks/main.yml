@@ -89,7 +89,19 @@
     url: "{{ elasticsearch_url }}"
     method: GET
     status_code: 200
-    url_username: "{{ elastic_user }}"
-    url_password: "{{ elastic_pwd }}"
+    url_username: newuser
+    url_password: test123
   retries: 2
   delay: 10
+
+- name: change elastic user password
+  win_shell: |
+    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-reset-password -u elastic -s -b --force cmdOutput 
+  register: elastic_pwd
+
+- name: save output of elastic_password
+  lineinfile:
+    path: group_vars/all.yml
+    regexp: '^elastic_pwd:'
+    line: "elastic_pwd: '{{ elastic_pwd.stdout | regex_replace('\r\n', '') | regex_replace('\n', '') | trim }}'"
+  delegate_to: localhost

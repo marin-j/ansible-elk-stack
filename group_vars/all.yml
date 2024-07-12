@@ -9,5 +9,4 @@ logstash_installation_dir: "C:ELK/logstash/logstash-{{ logstash_version }}"
 logstash_service_name: "Logstash"
 elasticsearch_url: "http://127.0.0.1:9200" 
 
-elastic_user: "newuser"
-elastic_pwd: "test123"
+elastic_user: "elastic"
