@@ -23,7 +23,7 @@
 
 - name: create kibana enrollment token
   win_shell: |
-    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token4
+    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token
   register: service_token
 
 - name: Extract the service token from the output
@@ -48,16 +48,12 @@
     src: kibana.yml.j2
     dest: C:\ELK\kibana\kibana-8.14.1\config\kibana.yml
 
-- name: Start Kibana
+- name: Create Kibana service using NSSM
   win_shell: |
-    Start-Process -FilePath "C:\ELK\kibana\kibana-8.14.1\/bin\kibana.bat"
-  args:
-    executable: powershell.exe
+    C:\Temp\nssm\nssm-2.24\win64\nssm.exe install Kibana-test-ans "C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat"
 
-#- name: Start Kibana
-#  win_shell: |
-#    Start-Process "C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat" -NoNewWindow
-#  args:
-#    executable: powershell.exe
-#  async: 0
-#  poll: 0
+- name: Start the Kibana service
+  win_service:
+    name: Kibana-test-ans
+    start_mode: auto
+    state: started
