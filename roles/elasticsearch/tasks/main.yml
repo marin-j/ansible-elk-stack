@@ -105,3 +105,8 @@
     regexp: '^elastic_pwd:'
     line: "elastic_pwd: '{{ elastic_pwd.stdout | regex_replace('\r\n', '') | regex_replace('\n', '') | trim }}'"
   delegate_to: localhost
+
+- name: Reload variables from group_vars/all.yml
+  include_vars:
+    file: group_vars/all.yml
+  delegate_to: localhost

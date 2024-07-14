@@ -23,7 +23,7 @@
 
 - name: create kibana enrollment token
   win_shell: |
-    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token
+    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token4
   register: service_token
 
 - name: Extract the service token from the output
@@ -33,8 +33,14 @@
 - name: save output of service_token
   lineinfile:
     path: group_vars/all.yml
-    regexp: '^service_token:'
+    regexp: '^service_token_extracted:'
     line: "service_token_extracted: '{{ extracted_token }}'"
+    backrefs: yes
+  delegate_to: localhost
+
+- name: Reload variables from group_vars/all.yml
+  include_vars:
+    file: group_vars/all.yml
   delegate_to: localhost
 
 - name: Configure Kibana
@@ -44,8 +50,14 @@
 
 - name: Start Kibana
   win_shell: |
-    Start-Process "C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat" -NoNewWindow
+    Start-Process -FilePath "C:\ELK\kibana\kibana-8.14.1\/bin\kibana.bat"
   args:
     executable: powershell.exe
-  async: 0
-  poll: 0
+
+#- name: Start Kibana
+#  win_shell: |
+#    Start-Process "C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat" -NoNewWindow
+#  args:
+#    executable: powershell.exe
+#  async: 0
+#  poll: 0
