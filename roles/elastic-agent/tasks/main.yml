@@ -65,6 +65,11 @@
     src: elastic-agent.yml.j2
     dest: C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.yml
 
+- name: Reload variables from group_vars/all.yml
+  include_vars:
+    file: group_vars/all.yml
+  delegate_to: localhost
+
 - name: Start Elastic Agent
   win_shell: |
     C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.exe install
