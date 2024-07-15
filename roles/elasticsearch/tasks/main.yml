@@ -14,27 +14,6 @@
     win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
     ignore_errors: yes
 
-
-  - name: Remove Elasticsearch installation directory
-    win_file:
-      path:  C:\ELK\elasticsearch\
-      state: absent
-
-  - name: Remove Elasticsearch data directory
-    win_file:
-      path: C:\ProgramData\Elastic\Elasticsearch
-      state: absent
-
-  - name: Remove Elasticsearch logs directory
-    win_file:
-      path: C:\ELK\elasticsearch\logs
-      state: absent
-
-  - name: Clean up any remaining configuration files
-    win_file:
-      path: C:\ELK\elasticsearch\config
-      state: absent
-
   when: service_status.stdout_lines != []
 
 
@@ -73,40 +52,34 @@
     start_mode: auto
     state: started
 
+- name: pause to allow service to start
+  pause:
+    seconds: 90
+
+- name: Check user already exists
+  win_shell: |
+    C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-users.bat list
+  args:
+    executable: cmd
+  register: elastic_users
+
 - name: Add user
   win_shell: |
-    C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-users.bat useradd newuser -p test123 -r superuser
+    C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-users.bat useradd {{ elastic_user }} -p {{ elastic_pwd }} -r superuser
   args:
     executable: cmd
   register: add_user
   until: add_user is not failed
   retries: 10
   delay: 10
-
+  when: elastic_users.stdout_lines | select("search", elastic_user) | list | length == 0
 
 - name: Wait for Elasticsearch to start
   win_uri:
     url: "{{ elasticsearch_url }}"
     method: GET
     status_code: 200
-    url_username: newuser
-    url_password: test123
+    url_username: "{{ elastic_user }}"
+    url_password: "{{ elastic_pwd }}"
   retries: 2
   delay: 10
-
-- name: change elastic user password
-  win_shell: |
-    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-reset-password -u elastic -s -b --force cmdOutput 
-  register: elastic_pwd
-
-- name: save output of elastic_password
-  lineinfile:
-    path: group_vars/all.yml
-    regexp: '^elastic_pwd:'
-    line: "elastic_pwd: '{{ elastic_pwd.stdout | regex_replace('\r\n', '') | regex_replace('\n', '') | trim }}'"
-  delegate_to: localhost
-
-- name: Reload variables from group_vars/all.yml
-  include_vars:
-    file: group_vars/all.yml
-  delegate_to: localhost
