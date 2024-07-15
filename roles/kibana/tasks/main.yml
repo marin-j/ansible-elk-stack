@@ -1,83 +1,83 @@
-- name: Check if Kibana service exists
-  win_shell: Get-Service kibana* | Select-Object -ExpandProperty Name
-  register: service_status
-  ignore_errors: yes
-
-- block:
-    
-  - name: Stop Kibana service
-    win_service:
-      name: "{{ service_status.stdout_lines[0] }}"
-      state: stopped
-
-  - name: Remove Kibana service
-    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
-    ignore_errors: yes
-
-  when: service_status.stdout_lines != []
-
-- name: Create Kibana directory
-  win_file:
-    path: C:\ELK\kibana
-    state: directory
-
-- name: Check folder permissions for Kibana
-  win_acl:
-    path: C:\ELK\kibana
-    user: '{{ ansible_user }}'
-    rights: ReadAndExecute
-    type: allow
-
-- name: Download Kibana
-  win_get_url:
-    url: https://artifacts.elastic.co/downloads/kibana/kibana-8.14.1-windows-x86_64.zip
-    dest: C:\ELK\kibana\kibana-8.14.1.zip
-
-- name: Unzip Kibana
-  win_unzip:
-    src: C:\ELK\kibana\kibana-8.14.1.zip
-    dest: C:\ELK\kibana
-    creates: C:\ELK\kibana\kibana-8.14.1
-
-- name: check kibana enrollment token
-  win_shell: |
-    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens list
-  register: kibana_tokens
-
-- block:
-
-  - name: create kibana enrollment token
-    win_shell: |
-      cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token2
-    register: service_token
-  
-  - name: Extract the service token from the output
-    set_fact:
-      extracted_token: "{{ service_token.stdout | regex_search('=\\s*(.*)', '\\1') | first | trim }}"
-  
-  - name: save output of service_token
-    lineinfile:
-      path: group_vars/all.yml
-      regexp: '^service_token_extracted:'
-      line: "service_token_extracted: '{{ extracted_token }}'"
-      backrefs: yes
-    delegate_to: localhost
-  
-  - name: Reload variables from group_vars/all.yml
-    include_vars:
-      file: group_vars/all.yml
-    delegate_to: localhost
-
-  when: "'elastic/kibana/my_token2' not in kibana_tokens.stdout_lines"
-
-- name: Configure Kibana
-  win_template:
-    src: kibana.yml.j2
-    dest: C:\ELK\kibana\kibana-8.14.1\config\kibana.yml
+#- name: Check if Kibana service exists
+#  win_shell: Get-Service kibana* | Select-Object -ExpandProperty Name
+#  register: service_status
+#  ignore_errors: yes
+#
+#- block:
+#    
+#  - name: Stop Kibana service
+#    win_service:
+#      name: "{{ service_status.stdout_lines[0] }}"
+#      state: stopped
+#
+#  - name: Remove Kibana service
+#    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
+#    ignore_errors: yes
+#
+#  when: service_status.stdout_lines != []
+#
+#- name: Create Kibana directory
+#  win_file:
+#    path: "{{ kibana_directory }}"
+#    state: directory
+#
+#- name: Check folder permissions for Kibana
+#  win_acl:
+#    path: "{{ kibana_directory }}"
+#    user: '{{ ansible_user }}'
+#    rights: ReadAndExecute
+#    type: allow
+#
+#- name: Download Kibana
+#  win_get_url:
+#    url: "{{ kibana_download_url }}"
+#    dest: "{{ kibana_zip_dest }}"
+#
+#- name: Unzip Kibana
+#  win_unzip:
+#    src: "{{ kibana_zip_dest }}"
+#    dest: "{{ kibana_directory }}"
+#    creates: "{{ kibana_unzipped_dir }}"
+#
+#- name: check kibana enrollment token
+#  win_shell: |
+#    cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens list
+#  register: kibana_tokens
+#
+#- block:
+#
+#  - name: create kibana enrollment token
+#    win_shell: |
+#      cmd /c C:\ELK\elasticsearch\elasticsearch-8.14.1\bin\elasticsearch-service-tokens create elastic/kibana my_token
+#    register: service_token
+#  
+#  - name: Extract the service token from the output
+#    set_fact:
+#      extracted_token: "{{ service_token.stdout | regex_search('=\\s*(.*)', '\\1') | first | trim }}"
+#  
+#  - name: save output of service_token
+#    lineinfile:
+#      path: group_vars/all.yml
+#      regexp: '^service_token_extracted:'
+#      line: "service_token_extracted: '{{ extracted_token }}'"
+#      backrefs: yes
+#    delegate_to: localhost
+#  
+#  - name: Reload variables from group_vars/all.yml
+#    include_vars:
+#      file: group_vars/all.yml
+#    delegate_to: localhost
+#
+#  when: "'elastic/kibana/my_token' not in kibana_tokens.stdout_lines"
+#
+#- name: Configure Kibana
+#  win_template:
+#    src: kibana.yml.j2
+#    dest: "{{ kibana_config_path }}\\kibana.yml"
 
 - name: Create Kibana service using NSSM
   win_shell: |
-    C:\Temp\nssm\nssm-2.24\win64\nssm.exe install Kibana "C:\ELK\kibana\kibana-8.14.1\bin\kibana.bat"
+    {{ nssm_path }} install Kibana "{{ kibana_unzipped_dir }}\bin\\kibana.bat"
 
 - name: Start the Kibana service
   win_service:
