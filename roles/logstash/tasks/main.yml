@@ -1,3 +1,21 @@
+- name: Check if Logstash service exists
+  win_shell: Get-Service logstash* | Select-Object -ExpandProperty Name
+  register: service_status
+  ignore_errors: yes
+
+- block:
+    
+  - name: Stop Logstash service
+    win_service:
+      name: "{{ service_status.stdout_lines[0] }}"
+      state: stopped
+
+  - name: Remove Logstash service
+    win_shell: sc.exe delete "{{ service_status.stdout_lines[0] }}"
+    ignore_errors: yes
+
+  when: service_status.stdout_lines != []
+
 - name: Create Logstash directory
   win_file:
     path: "{{ logstash_dir }}"
@@ -26,24 +44,12 @@
     src: logstash.yml.j2
     dest: C:\ELK\logstash\logstash-8.14.1\config\logstash.yml
 
-- name: Reload variables from group_vars/all.yml
-  include_vars:
-    file: group_vars/all.yml
-  delegate_to: localhost
+- name: Create Logstash service using NSSM
+  win_shell: |
+    C:\Temp\nssm\nssm-2.24\win64\nssm.exe install Logstash "C:\ELK\logstash\logstash-8.14.1\bin\logstash.bat"
+
 
 - name: Start Logstash service
   win_service:
-    name: "{{ logstash_service_name }}"
+    name: Logstash
     state: started
-
-- name: Wait for Logstash to start
-  win_uri:
-    url: http://localhost:9600
-    method: GET
-    status_code: 200
-    retries: 30
-    delay: 10
-    register: logstash_start_result
-    until: logstash_start_result.status == 200
-    retries: 5
-    delay: 10
