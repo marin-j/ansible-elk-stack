@@ -18,35 +18,35 @@
 
 - name: Create Logstash directory
   win_file:
-    path: "{{ logstash_dir }}"
+    path: "{{ logstash_directory }}"
     state: directory
 
 - name: Check folder permissions for Logstash
   win_acl:
-    path: "{{ logstash_dir }}"
+    path: "{{ logstash_directory }}"
     user: '{{ ansible_user }}'
     rights: ReadAndExecute
     type: allow
 
 - name: Download Logstash
   win_get_url:
-    url: https://artifacts.elastic.co/downloads/logstash/logstash-8.14.1-windows-x86_64.zip
-    dest: C:\ELK\logstash\logstash-8.14.1.zip
+    url: "{{ logstash_download_url }}"
+    dest: "{{ logstash_zip_dest }}"
 
 - name: Unzip Logstash
   win_unzip:
-    src: C:\ELK\logstash\logstash-8.14.1.zip
-    dest: C:\ELK\logstash
-    creates: C:\ELK\logstash\logstash-8.14.1
+    src: "{{ logstash_zip_dest }}"
+    dest: "{{ logstash_directory }}"
+    creates: "{{ logstash_unzipped_dir }}"
 
 - name: Configure Logstash
   win_template:
     src: logstash.yml.j2
-    dest: C:\ELK\logstash\logstash-8.14.1\config\logstash.yml
+    dest: "{{ logstash_config_path }}\\logstash.yml"
 
 - name: Create Logstash service using NSSM
   win_shell: |
-    C:\Temp\nssm\nssm-2.24\win64\nssm.exe install Logstash "C:\ELK\logstash\logstash-8.14.1\bin\logstash.bat"
+    {{ nssm_path }} install Logstash "{{ logstash_unzipped_dir }}\\bin\\logstash.bat"
 
 
 - name: Start Logstash service
