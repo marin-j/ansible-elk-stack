@@ -15,8 +15,10 @@ kibana_config_path: "{{ kibana_unzipped_dir }}\\config"
 kibana_enrollment_list_command: "cmd /c {{ elasticsearch_bin_path }}\\elasticsearch-service-tokens list"
 kibana_enrollment_create_command: "cmd /c {{ elasticsearch_bin_path }}\\elasticsearch-service-tokens create elastic/kibana my_token"
 
-nssm_url: "https://nssm.cc/release/nssm-2.24.zip"
+nssm_download_url: "https://nssm.cc/release/nssm-2.24.zip"
+nssm_zip_dest: "C:\\Temp\\nssm.zip"
 nssm_destination: "C:/Temp/nssm"
+nssm_unzip_dest: "C:\\Temp\\nssm"
 nssm_path: "C:\\Temp\\nssm\\nssm-2.24\\win64\\nssm.exe"
 
 logstash_version: "8.14.1"

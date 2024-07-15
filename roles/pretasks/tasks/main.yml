@@ -1,7 +1,7 @@
 # Check if nssm is needed for Kibana and logstash to run as service
 - name: Check if NSSM is installed
   win_shell: |
-    Get-Command "C:\Temp\nssm\nssm-2.24\win64\nssm.exe"
+    Get-Command "{{ nssm_path }}"
   register: nssm_installed_result
 
 - block:
@@ -20,13 +20,13 @@
   
   - name: Download NSSM
     win_get_url:
-      url: "https://nssm.cc/release/nssm-2.24.zip"
-      dest: C:\Temp\nssm.zip
+      url: "{{ nssm_download_url }}"
+      dest: "{{ nssm_zip_dest }}"
   
   - name: Unzip NSSM
     win_unzip:
-      src: C:\Temp\nssm.zip
-      dest: C:\Temp\nssm
-      creates: C:\Temp\nssm\nssm.exe
+      src: "{{ nssm_zip_dest }}"
+      dest: "{{ nssm_unzip_dest }}"
+      creates: "{{ nssm_path }}"
   
   when: nssm_installed_result.rc != 0
