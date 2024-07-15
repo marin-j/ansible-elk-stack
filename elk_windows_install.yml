@@ -1,5 +1,5 @@
 - name: Check depedencies needed for elk stack
-  hosts: all
+  hosts: kibana_hosts,logstash_hosts
   roles:
     - pretasks
 
@@ -14,7 +14,7 @@
     - kibana
 
 - name: Install Logstash
-  hosts: kibana_hosts
+  hosts: logstash_hosts
   roles:
     - logstash
 
