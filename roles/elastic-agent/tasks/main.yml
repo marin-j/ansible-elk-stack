@@ -67,6 +67,12 @@
 
 - name: Start Elastic Agent
   win_shell: |
-    C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.exe install
+    echo Y | & "C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.exe"
   args:
-    executable: cmd
+    executable: powershell.exe
+
+#- name: Start Elastic Agent
+#  win_shell: |
+#    C:\ELK\elastic-agent\elastic-agent-8.14.1-windows-x86_64\elastic-agent.exe install
+#  args:
+#    executable: cmd
